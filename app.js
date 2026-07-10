@@ -37,6 +37,15 @@
     link.rel = 'noopener noreferrer';
   });
 
+  // Native, accessible language selector. Preserve the current section when possible.
+  $$('[data-language-select]').forEach(select => {
+    select.addEventListener('change', () => {
+      const target = new URL(select.value, window.location.href);
+      target.hash = window.location.hash;
+      window.location.href = target.href;
+    });
+  });
+
   // Preserve the current section when switching language.
   $$('[data-lang-link]').forEach(link => {
     link.addEventListener('click', event => {
@@ -77,6 +86,7 @@
   });
   if (nav) $$('a', nav).forEach(link => link.addEventListener('click', closeMenu));
   window.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  window.addEventListener('resize', () => { if (window.innerWidth > 820) closeMenu(); }, { passive: true });
 
   // Reveal animations
   const revealItems = $$('.reveal');
@@ -172,28 +182,43 @@
     if (event.key === 'Escape') closeLightbox();
   });
 
-  // Cookie consent and privacy-friendly Google Map
-  const CONSENT_KEY = 'je_cookie_consent_v1';
+  // Consent management and privacy-friendly Google Map
+  const CONSENT_KEY = 'je_cookie_consent_v2';
+  const CONSENT_LIFETIME_MS = 180 * 24 * 60 * 60 * 1000; // 6 months
   const banner = $('[data-cookie-banner]');
   const dialog = $('[data-consent-dialog]');
   const externalToggle = $('[data-external-toggle]');
   const mapShell = $('[data-map-shell]');
+  const mapPlaceholderMarkup = mapShell?.innerHTML || '';
 
-  const readConsent = () => {
-    try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); }
+  const safeStorageGet = key => {
+    try { return localStorage.getItem(key); }
     catch { return null; }
   };
-  const writeConsent = externalMedia => {
-    const consent = { necessary: true, externalMedia: Boolean(externalMedia), updated: new Date().toISOString() };
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
-    if (banner) banner.hidden = true;
-    if (consent.externalMedia) loadMap();
-    return consent;
+  const safeStorageSet = (key, value) => {
+    try { localStorage.setItem(key, value); return true; }
+    catch { return false; }
   };
-  const openSettings = () => {
-    const consent = readConsent();
-    if (externalToggle) externalToggle.checked = Boolean(consent?.externalMedia);
-    dialog?.showModal();
+  const safeStorageRemove = key => {
+    try { localStorage.removeItem(key); }
+    catch { /* Storage can be unavailable in hardened browsers. */ }
+  };
+
+  const readConsent = () => {
+    try {
+      const raw = safeStorageGet(CONSENT_KEY);
+      if (!raw) return null;
+      const consent = JSON.parse(raw);
+      const expiresAt = Date.parse(consent?.expiresAt || '');
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        safeStorageRemove(CONSENT_KEY);
+        return null;
+      }
+      return consent;
+    } catch {
+      safeStorageRemove(CONSENT_KEY);
+      return null;
+    }
   };
 
   function loadMap() {
@@ -201,11 +226,37 @@
     const iframe = document.createElement('iframe');
     iframe.title = mapShell.dataset.mapTitle || ui.mapTitle;
     iframe.loading = 'lazy';
-    iframe.referrerPolicy = 'no-referrer-when-downgrade';
+    iframe.referrerPolicy = 'no-referrer';
     iframe.allowFullscreen = true;
     iframe.src = data.mapUrl || 'https://www.google.com/maps?q=R%C4%ABgas%20iela%2064%2C%20Daugavpils&output=embed';
     mapShell.replaceChildren(iframe);
   }
+
+  function unloadMap() {
+    if (!mapShell || !$('iframe', mapShell)) return;
+    mapShell.innerHTML = mapPlaceholderMarkup;
+  }
+
+  const writeConsent = externalMedia => {
+    const updated = new Date();
+    const consent = {
+      necessary: true,
+      externalMedia: Boolean(externalMedia),
+      updated: updated.toISOString(),
+      expiresAt: new Date(updated.getTime() + CONSENT_LIFETIME_MS).toISOString()
+    };
+    safeStorageSet(CONSENT_KEY, JSON.stringify(consent));
+    if (banner) banner.hidden = true;
+    if (consent.externalMedia) loadMap();
+    else unloadMap();
+    return consent;
+  };
+
+  const openSettings = () => {
+    const consent = readConsent();
+    if (externalToggle) externalToggle.checked = Boolean(consent?.externalMedia);
+    dialog?.showModal();
+  };
 
   $$('[data-cookie-settings]').forEach(button => button.addEventListener('click', openSettings));
   $('[data-cookie-accept]')?.addEventListener('click', () => writeConsent(true));
@@ -215,9 +266,10 @@
     writeConsent(Boolean(externalToggle?.checked));
     dialog?.close();
   });
-  $('[data-load-map]')?.addEventListener('click', () => {
+  mapShell?.addEventListener('click', event => {
+    const loadButton = event.target.closest('[data-load-map]');
+    if (!loadButton) return;
     writeConsent(true);
-    loadMap();
   });
 
   const consent = readConsent();
