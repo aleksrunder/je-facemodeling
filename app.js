@@ -2,7 +2,11 @@
   'use strict';
 
   const data = window.JE_SITE || {};
-  const results = window.JE_RESULTS || [];
+  const lang = document.documentElement.lang === 'lv' ? 'lv' : 'ru';
+  const resultSource = window.JE_RESULTS || {};
+  const results = Array.isArray(resultSource) ? resultSource : (resultSource[lang] || resultSource.ru || []);
+  const ui = lang === 'lv' ? { before: 'Pirms', after: 'Pēc', open: 'Atvērt fotoattēlus', compare: 'Salīdzināt fotoattēlus pirms un pēc', mapTitle: 'Google karte: Rīgas iela 64, Daugavpils' } : { before: 'До', after: 'После', open: 'Открыть фото', compare: 'Сравнить фото до и после', mapTitle: 'Google-карта: Rīgas iela 64, Daugavpils' };
+  const localized = value => typeof value === 'object' && value !== null ? (value[lang] || value.ru || '') : (value || '');
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
@@ -10,7 +14,7 @@
   $$('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
 
   // Contact links from one configuration object
-  const whatsappUrl = `https://wa.me/${data.phoneInternational || '37129831755'}?text=${encodeURIComponent(data.whatsappMessage || '')}`;
+  const whatsappUrl = `https://wa.me/${data.phoneInternational || '37129831755'}?text=${encodeURIComponent(localized(data.whatsappMessage))}`;
   $$('[data-booking-link], [data-whatsapp]').forEach(link => {
     link.href = whatsappUrl;
     link.target = '_blank';
@@ -21,7 +25,7 @@
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
   });
-  const certificateUrl = `https://wa.me/${data.phoneInternational || '37129831755'}?text=${encodeURIComponent(data.certificateMessage || data.whatsappMessage || '')}`;
+  const certificateUrl = `https://wa.me/${data.phoneInternational || '37129831755'}?text=${encodeURIComponent(localized(data.certificateMessage) || localized(data.whatsappMessage))}`;
   $$('[data-certificate-link]').forEach(link => {
     link.href = certificateUrl;
     link.target = '_blank';
@@ -31,6 +35,16 @@
     if (data.facebook) link.href = data.facebook;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
+  });
+
+  // Preserve the current section when switching language.
+  $$('[data-lang-link]').forEach(link => {
+    link.addEventListener('click', event => {
+      const target = new URL(link.getAttribute('href'), window.location.href);
+      target.hash = window.location.hash;
+      event.preventDefault();
+      window.location.href = target.href;
+    });
   });
 
   // Header, scroll progress and mobile CTA
@@ -90,15 +104,15 @@
       <div class="compare" style="--position: 50%">
         <img class="before-image" src="${item.before}" alt="${item.altBefore}" loading="lazy" width="700" height="1400">
         <img class="after-image" src="${item.after}" alt="${item.altAfter}" loading="lazy" width="700" height="1400">
-        <span class="compare-label compare-label-before">До</span>
-        <span class="compare-label compare-label-after">После</span>
+        <span class="compare-label compare-label-before">${ui.before}</span>
+        <span class="compare-label compare-label-after">${ui.after}</span>
         <span class="compare-divider"></span>
         <span class="compare-handle"></span>
-        <input type="range" min="0" max="100" value="50" aria-label="Сравнить фото до и после: ${item.title}">
+        <input type="range" min="0" max="100" value="50" aria-label="${ui.compare}: ${item.title}">
       </div>
       <figcaption class="result-caption">
         <span>${item.title}</span>
-        <button type="button" data-open-result="${index}">Открыть фото</button>
+        <button type="button" data-open-result="${index}">${ui.open}</button>
       </figcaption>
     </figure>`;
 
@@ -185,7 +199,7 @@
   function loadMap() {
     if (!mapShell || $('iframe', mapShell)) return;
     const iframe = document.createElement('iframe');
-    iframe.title = 'Google-карта: Rīgas iela 64, Daugavpils';
+    iframe.title = mapShell.dataset.mapTitle || ui.mapTitle;
     iframe.loading = 'lazy';
     iframe.referrerPolicy = 'no-referrer-when-downgrade';
     iframe.allowFullscreen = true;
