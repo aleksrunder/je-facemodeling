@@ -1048,7 +1048,12 @@ html[lang="lv"] .contacts-copy h2 { font-size: clamp(40px, 3.25vw, 51px); letter
   .site-nav .language-picker-chevron { right: 16px; }
   .site-nav .language-picker select { color: #fff; padding-left: 70%; }
 
-  .hero { min-height: 0; height: auto; }
+  .hero {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
   .hero-media {
     background-image: url('assets/hero-massage-mobile.webp');
     background-position: center top;
@@ -1111,7 +1116,7 @@ html[lang="lv"] .contacts-copy h2 { font-size: clamp(40px, 3.25vw, 51px); letter
   .hero-inner { min-height: 555px; padding-top: 82px; padding-bottom: 25px; }
   .hero h1 { font-size: clamp(41px, 12vw, 52px); }
   .hero .eyebrow { margin-bottom: 10px; }
-  .hero-description { font-size: 12.5px; }
+  .hero-description { display: block; font-size: 12.5px; }
   .hero-actions { max-width: none; }
   .hero-actions .button { letter-spacing: .065em; }
   .stats-grid { width: 100%; }
@@ -1140,7 +1145,6 @@ html[lang="lv"] .contacts-copy h2 { font-size: clamp(40px, 3.25vw, 51px); letter
 @media (max-width: 370px) {
   .hero-inner { min-height: 530px; }
   .hero h1 { font-size: 40px; }
-  .hero-description { display: none; }
   .hero-actions { margin-top: 17px; }
   .stat-copy { font-size: 11px; }
   .contacts-copy h2 { font-size: 34px; }
