@@ -1232,6 +1232,7 @@ html[lang="lv"] .contacts-copy h2 { font-size: clamp(40px, 3.25vw, 51px); letter
 
 @media (max-width: 480px) {
   .legal-toc { grid-template-columns: 1fr; }
+  .legal-content > h1 { max-width: 100%; overflow-wrap: anywhere; hyphens: auto; }
   .legal-callout { border-left-width: 3px; }
   .legal-content h2 { font-size: 24px; }
   .legal-table { min-width: 610px; font-size: 12px; }
