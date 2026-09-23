@@ -108,6 +108,7 @@
   const resultsGrid = $('#results-grid');
   const lightbox = $('[data-lightbox]');
   let currentResult = 0;
+  let currentGalleryResult = 0;
 
   const resultTemplate = (item, index) => `
     <figure class="result-card reveal" data-result-index="${index}">
@@ -126,6 +127,17 @@
       </figcaption>
     </figure>`;
 
+  const renderGalleryResult = index => {
+    if (!results.length || !resultsGrid) return;
+    currentGalleryResult = (index + results.length) % results.length;
+    $$('.result-card', resultsGrid).forEach((card, cardIndex) => {
+      card.classList.toggle('is-current', cardIndex === currentGalleryResult);
+      card.setAttribute('aria-hidden', String(cardIndex !== currentGalleryResult));
+    });
+    const counter = $('[data-results-count]');
+    if (counter) counter.textContent = `${currentGalleryResult + 1} / ${results.length}`;
+  };
+
   if (resultsGrid) {
     resultsGrid.innerHTML = results.map(resultTemplate).join('');
     $$('.result-card', resultsGrid).forEach(card => card.classList.add('is-visible'));
@@ -143,7 +155,30 @@
     $$('[data-open-result]', resultsGrid).forEach(button => {
       button.addEventListener('click', () => openLightbox(Number(button.dataset.openResult)));
     });
+    renderGalleryResult(0);
   }
+
+  $('[data-results-prev]')?.addEventListener('click', () => renderGalleryResult(currentGalleryResult - 1));
+  $('[data-results-next]')?.addEventListener('click', () => renderGalleryResult(currentGalleryResult + 1));
+  $('[data-open-current]')?.addEventListener('click', () => openLightbox(currentGalleryResult));
+
+  // Compact review carousel. Copy is authored in the localized HTML so no client
+  // identities or testimonials are manufactured by JavaScript.
+  const reviewSlides = $$('.review-slide');
+  let currentReview = 0;
+  const renderReview = index => {
+    if (!reviewSlides.length) return;
+    currentReview = (index + reviewSlides.length) % reviewSlides.length;
+    reviewSlides.forEach((slide, slideIndex) => {
+      slide.classList.toggle('is-current', slideIndex === currentReview);
+      slide.setAttribute('aria-hidden', String(slideIndex !== currentReview));
+    });
+    const counter = $('[data-review-count]');
+    if (counter) counter.textContent = `${currentReview + 1} / ${reviewSlides.length}`;
+  };
+  $('[data-review-prev]')?.addEventListener('click', () => renderReview(currentReview - 1));
+  $('[data-review-next]')?.addEventListener('click', () => renderReview(currentReview + 1));
+  renderReview(0);
 
   function renderLightbox(index) {
     if (!results.length) return;
